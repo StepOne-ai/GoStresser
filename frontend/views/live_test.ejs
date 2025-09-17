@@ -1,0 +1,224 @@
+<!-- DEBUG: live_test.ejs loaded at <%= new Date().toISOString() %> -->
+<!-- Scenario: <%= scenario?.name || 'Unknown' %> | Run ID: <%= runId %> -->
+
+<h2 class="text-2xl font-bold mb-2">
+  <span data-i18n="Running:">Running:</span> 
+  <span class="text-emerald-600"><%= scenario.name %></span>
+</h2>
+<p class="text-slate-600 mb-6">
+  <span data-i18n="Run ID:">Run ID:</span> <code><%= runId %></code> · 
+  <span id="timer" class="font-mono">0s / 10s</span>
+</p>
+
+<!-- Fixed height container -->
+<div class="bg-slate-100 rounded-xl p-4 mb-6" style="height: 420px; overflow: hidden;">
+  <div class="space-y-4">
+    <!-- RPS Chart -->
+    <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200" style="height: 90px;">
+      <div class="flex justify-between items-center mb-1">
+        <h3 class="font-bold text-xs" data-i18n="RPS">📈 RPS</h3>
+        <span id="rpsValue" class="text-lg font-bold text-emerald-600">0</span>
+      </div>
+      <canvas id="rpsChart" style="height: 50px; width: 100%; display: block;"></canvas>
+    </div>
+
+    <!-- Latency Chart -->
+    <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200" style="height: 90px;">
+      <div class="flex justify-between items-center mb-1">
+        <h3 class="font-bold text-xs" data-i18n="Latency">⏱️ Latency</h3>
+        <span id="latencyValue" class="text-lg font-bold text-violet-600">0ms</span>
+      </div>
+      <canvas id="latencyChart" style="height: 50px; width: 100%; display: block;"></canvas>
+    </div>
+
+    <!-- CPU Chart -->
+    <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200" style="height: 90px;">
+      <div class="flex justify-between items-center mb-1">
+        <h3 class="font-bold text-xs" data-i18n="CPU">🖥️ CPU</h3>
+        <span id="cpuValue" class="text-lg font-bold text-amber-600">0%</span>
+      </div>
+      <canvas id="cpuChart" style="height: 50px; width: 100%; display: block;"></canvas>
+    </div>
+
+    <!-- RAM Chart -->
+    <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200" style="height: 90px;">
+      <div class="flex justify-between items-center mb-1">
+        <h3 class="font-bold text-xs" data-i18n="RAM">💾 RAM</h3>
+        <span id="ramValue" class="text-lg font-bold text-red-600">0%</span>
+      </div>
+      <canvas id="ramChart" style="height: 50px; width: 100%; display: block;"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6 flex justify-center">
+  <div id="controlButtons" class="flex space-x-4">
+    <!-- This will be replaced by JS after test completes -->
+    <button id="stopButton" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition">
+      <span data-i18n="Stop Test">■ Stop Test</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// Wait for DOM, then delay slightly for safety
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('✅ DOM loaded - initializing charts in 200ms...');
+
+  setTimeout(() => {
+    // Chart creation with safety checks
+    function createChart(canvasId, color) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) {
+        console.error(`❌ Canvas #${canvasId} not found in DOM!`);
+        return null;
+      }
+
+      const ctx = canvas.getContext('2d');
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            data : [],
+            borderColor: color,
+            backgroundColor: color + '20',
+            tension: 0.3,
+            fill: true,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { display: false }, ticks: { display: false } },
+            x: { grid: { display: false }, ticks: { display: false } }
+          },
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          animation: { duration: 0 }
+        }
+      });
+    }
+
+    // Initialize charts
+    const rpsChart = createChart('rpsChart', '#10b981');
+    const latencyChart = createChart('latencyChart', '#8b5cf6');
+    const cpuChart = createChart('cpuChart', '#f59e0b');
+    const ramChart = createChart('ramChart', '#ef4444');
+
+    if (!rpsChart || !latencyChart || !cpuChart || !ramChart) {
+      console.error('❌ One or more charts failed to initialize');
+      return;
+    }
+
+    console.log('✅ All charts initialized successfully');
+
+    // Elements
+    const timerEl = document.getElementById('timer');
+    const valueEls = {
+      rps: document.getElementById('rpsValue'),
+      latency: document.getElementById('latencyValue'),
+      cpu: document.getElementById('cpuValue'),
+      ram: document.getElementById('ramValue')
+    };
+
+    let timeElapsed = 0;
+    const MAX_DURATION = 10;
+    const MAX_DATA_POINTS = 8;
+
+    const stopButton = document.getElementById('stopButton');
+if (stopButton) {
+  stopButton.addEventListener('click', () => {
+    if (window.updateInterval) {
+      clearInterval(window.updateInterval);
+    }
+    timerEl.textContent = `⏹️ Stopped at ${timeElapsed}s`;
+    timerEl.classList.add('text-amber-600');
+
+    // Show rerun button immediately
+    const buttonContainer = document.getElementById('controlButtons');
+    if (buttonContainer) {
+        buttonContainer.innerHTML = `
+            <a href="/run/<%= scenario.id %>" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
+                <span>🔄</span>
+                <span data-i18n="Rerun Test">Rerun Test</span>
+            </a>
+            <a href="/report/<%= runId %>" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
+                <span>📊</span>
+                <span data-i18n="View Report">View Report</span>
+            </a>
+            `;
+        }
+    });
+    }
+
+    const updateCharts = () => {
+      fetch("<%= metricsUrl %>")
+        .then(res => res.json())
+        .then(data => {
+          // Update values
+          valueEls.rps.textContent = data.rps || 0;
+          valueEls.latency.textContent = (data.latency || 0) + 'ms';
+          valueEls.cpu.textContent = (data.cpu || 0) + '%';
+          valueEls.ram.textContent = (data.ram || 0) + '%';
+
+          // Update charts
+          const charts = [rpsChart, latencyChart, cpuChart, ramChart];
+          const values = [data.rps, data.latency, data.cpu, data.ram];
+
+          charts.forEach((chart, i) => {
+            if (chart.data.labels.length >= MAX_DATA_POINTS) {
+              chart.data.labels.shift();
+              chart.data.datasets[0].data.shift();
+            }
+            chart.data.labels.push('');
+            chart.data.datasets[0].data.push(values[i] || 0);
+            chart.update();
+          });
+
+          // Update timer
+          timeElapsed = Math.min((data.timeElapsed !== undefined ? data.timeElapsed : timeElapsed + 1), MAX_DURATION);
+          timerEl.textContent = `${timeElapsed}s / ${MAX_DURATION}s`;
+
+          if (timeElapsed >= MAX_DURATION) {
+            console.log("✅ Test completed — clearing interval");
+            clearInterval(window.updateInterval);
+            
+            timerEl.textContent = `✅ Completed (${MAX_DURATION}s)`;
+            timerEl.classList.add('text-emerald-600');
+
+            // Replace buttons with "Rerun Test"
+            const buttonContainer = document.getElementById('controlButtons');
+            if (buttonContainer) {
+                buttonContainer.innerHTML = `
+                <a href="/run/<%= scenario.id %>" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
+                    <span>🔄</span>
+                    <span data-i18n="Rerun Test">Rerun Test</span>
+                </a>
+                <a href="/report/<%= runId %>" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
+                    <span>📊</span>
+                    <span data-i18n="View Report">View Report</span>
+                </a>
+                `;
+            }
+
+            if (typeof window.retranslate === 'function') {
+                window.retranslate();
+            }
+            }
+        })
+        .catch(err => {
+          console.error('❌ Fetch error:', err);
+          timeElapsed = Math.min(timeElapsed + 1, MAX_DURATION);
+          timerEl.textContent = `${timeElapsed}s / ${MAX_DURATION}s`;
+        });
+    };
+
+    // Start updates
+    updateCharts();
+    window.updateInterval = setInterval(updateCharts, 1000);
+
+  }, 200);
+});
+</script>

@@ -1,0 +1,46 @@
+<h2 class="text-2xl font-bold mb-6" data-i18n="Create New Scenario">Create New Scenario</h2>
+
+<form action="/scenario" method="POST" class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 space-y-4">
+  <div>
+    <label class="block text-sm font-medium mb-1" data-i18n="Scenario Name">Scenario Name</label>
+    <input type="text" name="name" class="w-full p-2 border border-slate-300 rounded" required>
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium mb-1" data-i18n="Target URL">Target URL</label>
+    <input type="url" name="target" class="w-full p-2 border border-slate-300 rounded" required>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium mb-1" data-i18n="Method">Method</label>
+      <select name="method" class="w-full p-2 border border-slate-300 rounded">
+        <option value="GET" data-i18n="GET">GET</option>
+        <option value="POST" data-i18n="POST">POST</option>
+        <option value="PUT" data-i18n="PUT">PUT</option>
+        <option value="DELETE" data-i18n="DELETE">DELETE</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1" data-i18n="RPS">RPS</label>
+      <input type="number" name="rps" class="w-full p-2 border border-slate-300 rounded" value="100" min="1" required>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium mb-1" data-i18n="Duration (seconds)">Duration (seconds)</label>
+      <input type="number" name="duration" class="w-full p-2 border border-slate-300 rounded" value="30" min="1" required>
+    </div>
+    <div class="flex items-end">
+      <label class="inline-flex items-center">
+        <input type="checkbox" name="monitorServer" class="mr-2">
+        <span data-i18n="Monitor Server">Monitor Server</span>
+      </label>
+    </div>
+  </div>
+
+  <button type="submit" class="px-4 py-2 rounded-lg font-medium transition-all bg-emerald-500 text-white hover:bg-emerald-600 w-full mt-2">
+    <span data-i18n="Save & Run Later">Save & Run Later</span>
+  </button>
+</form>
