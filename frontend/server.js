@@ -2,24 +2,31 @@
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+const session = require('express-session');
 const expressLayouts = require('express-ejs-layouts');
 
 const app = express();
 const PORT = 3000;
 
 const USE_MOCK_API = true;
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 let mockElapsedTime = 0;
 
+app.use(session({
+  secret: 'your-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false }
+}));
+
 app.use(expressLayouts);
-app.set('layout', 'layout'); // default layout file (views/layout.ejs)
+app.set('layout', 'layout');
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// ========= API CLIENT =========
 const apiClient = {
   async getScenarios() {
     if (USE_MOCK_API) {
@@ -47,17 +54,106 @@ const apiClient = {
     const res = await axios.post(`${API_BASE_URL}/run/${scenarioId}`);
     return res.data;
   },
+  
+  async register(credentials) {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/auth/register`, credentials);
+      return { success: true, data: res.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Registration failed'
+      };
+    }
+  },
+
+  async login(credentials) {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, credentials);
+      return { success: true, data: res.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Login failed'
+      };
+    }
+  },
+
+  async logout() {
+    try {
+      await axios.post(`${API_BASE_URL}/auth/logout`);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Logout failed'
+      };
+    }
+  },
+
 
   getMetricsUrl(runId) {
     return `/api-proxy/metrics/${runId}`;
   },
 };
 
-// Then inside the route:
+function requireAuth(req, res, next) {
+  if (!req.session || !req.session.userId) {
+    return res.redirect('/login');
+  }
+  next();
+}
+
+app.get('/', requireAuth, async (req, res) => {
+  try {
+    const scenarios = await apiClient.getScenarios(req.session.token);
+    res.render('dashboard', { 
+      scenarios, 
+      path: '/',
+      userEmail: req.session.userEmail
+    });
+  } catch (err) {
+    res.status(500).send('Failed to load scenarios');
+  }
+});
+
+app.get('/login', (req, res) => {
+  res.render('login', { path: '/login' });
+});
+
+app.get('/register', (req, res) => {
+  res.render('register', { path: '/register' });
+});
+
+app.post('/api/v1/auth/register', async (req, res) => {
+  console.log(req.body);
+  const result = await apiClient.register(req.body);
+  res.json(result);
+});
+
+app.post('/api/v1/auth/login', async (req, res) => {
+  console.log(req);
+  const result = await apiClient.login(req.body);
+  if (result.success) {
+    req.session.token = result.data.token;
+    req.session.userId = result.data.user.id;
+    req.session.userEmail = result.data.user.email; 
+  }
+  res.json(result);
+});
+
+app.post('/api/v1/auth/logout', async (req, res) => {
+  console.log(req.body);
+  const result = await apiClient.logout();
+  if (result.success) {
+    req.session.destroy();
+  }
+  res.json(result);
+});
+
 app.get('/api-proxy/metrics/:runId', async (req, res) => {
   try {
     if (USE_MOCK_API) {
-      // Increment time every call
       mockElapsedTime = (mockElapsedTime + 1) % 11; // 0 → 10 → 0...
 
       setTimeout(() => {
@@ -80,26 +176,14 @@ app.get('/api-proxy/metrics/:runId', async (req, res) => {
   }
 });
 
-// ========= ROUTES =========
-app.get('/', async (req, res) => {
-  try {
-    const scenarios = await apiClient.getScenarios();
-    res.render('dashboard', { 
-      scenarios,
-      path: '/' // ← for active nav
-    });
-  } catch (err) {
-    res.status(500).send('Failed to load scenarios');
-  }
-});
-
-app.get('/scenario/new', (req, res) => {
+app.get('/scenario/new', requireAuth, (req, res) => {
   res.render('create_scenario', { 
-    path: '/scenario/new' // ← for active nav
+    path: '/scenario/new',
+    userEmail: req.session.userEmail
   });
 });
 
-app.get('/run/:id', async (req, res) => {
+app.get('/run/:id', requireAuth, async (req, res) => {
   try {
     const scenarios = await apiClient.getScenarios();
     const scenario = scenarios.find(s => s.id === req.params.id);
@@ -111,14 +195,15 @@ app.get('/run/:id', async (req, res) => {
       scenario, 
       runId,
       metricsUrl: apiClient.getMetricsUrl(runId),
-      path: '/run/' + req.params.id // ← optional, or just leave as '/'
+      path: '/run/' + req.params.id,
+      userEmail: req.session.userEmail
     });
   } catch (err) {
     res.status(500).send('Failed to start test');
   }
 });
 
-app.get('/report/:runId', (req, res) => {
+app.get('/report/:runId', requireAuth, (req, res) => {
   const mockReport = {
     runId: req.params.runId,
     scenarioName: "Users API Load",
@@ -133,7 +218,8 @@ app.get('/report/:runId', (req, res) => {
   };
   res.render('report', { 
     report: mockReport,
-    path: '/' // or '/report'
+    path: '/',
+    userEmail: req.session.userEmail
   });
 });
 
