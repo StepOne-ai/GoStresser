@@ -4,11 +4,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/StepOne-ai/GoStresser/config"
 	db "github.com/StepOne-ai/GoStresser/database"
 	"github.com/StepOne-ai/GoStresser/handlers"
 	"github.com/StepOne-ai/GoStresser/middleware"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -35,6 +37,14 @@ func main() {
     }
 
     r := gin.Default()
+    r.Use(cors.New(cors.Config{
+        AllowOrigins:     []string{"http://localhost:3000"},
+        AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+        AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+        ExposeHeaders:    []string{"Content-Length"},
+        AllowCredentials: true,
+        MaxAge:           12 * time.Hour,
+    }))
     api := r.Group("/api/v1")
     {
         auth := api.Group("/auth")

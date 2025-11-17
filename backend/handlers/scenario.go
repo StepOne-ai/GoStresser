@@ -44,7 +44,7 @@ func CreateScenarioHandler(c *gin.Context) {
     }
 
     if err := db.DB.Create(&scenario).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create scenario"})
+        c.JSON(http.StatusBadRequest, gin.H{"error": "такой сценарий уже существует"})
         return
     }
 
