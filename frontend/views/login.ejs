@@ -37,6 +37,12 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
 
+  // Show loading state
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalButtonText = submitButton.innerHTML;
+  submitButton.disabled = true;
+  submitButton.innerHTML = '<span class="animate-spin mr-2">⌛</span> Logging in...';
+
   try {
     const response = await fetch('/api/v1/auth/login', {
       method: 'POST',
@@ -45,16 +51,28 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     });
 
     const result = await response.json();
+    const errorMessageElement = document.getElementById('errorMessage');
 
-    if (response.ok) {
+    if (result.success) {
+      // Login successful - server has already set session cookies
       window.location.href = '/';
     } else {
-      document.getElementById('errorMessage').textContent = result.error;
-      document.getElementById('errorMessage').classList.remove('hidden');
+      // Show error message from server
+      errorMessageElement.textContent = result.error || 'Invalid email or password';
+      errorMessageElement.classList.remove('hidden');
+      
+      // Reset button state
+      submitButton.disabled = false;
+      submitButton.innerHTML = originalButtonText;
     }
   } catch (err) {
-    document.getElementById('errorMessage').textContent = 'Network error';
-    document.getElementById('errorMessage').classList.remove('hidden');
+    const errorMessageElement = document.getElementById('errorMessage');
+    errorMessageElement.textContent = 'Network error. Please check your connection.';
+    errorMessageElement.classList.remove('hidden');
+    
+    // Reset button state
+    submitButton.disabled = false;
+    submitButton.innerHTML = originalButtonText;
   }
 });
 </script>

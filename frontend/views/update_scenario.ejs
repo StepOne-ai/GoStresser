@@ -1,0 +1,150 @@
+<h2 class="text-2xl font-bold mb-6" data-i18n="Update Scenario">Update Scenario</h2>
+
+<div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 space-y-4">
+  <form id="updateScenarioForm" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1" data-i18n="Scenario Name">Scenario Name</label>
+      <input type="text" name="name" id="scenarioName" class="w-full p-2 border border-slate-300 rounded" required>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1" data-i18n="Target URL">Target URL</label>
+      <input type="url" name="target" id="targetUrl" class="w-full p-2 border border-slate-300 rounded" required placeholder="https://api.example.com/endpoint">
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1" data-i18n="Method">Method</label>
+        <select name="method" id="method" class="w-full p-2 border border-slate-300 rounded">
+          <option value="GET" data-i18n="GET">GET</option>
+          <option value="POST" data-i18n="POST">POST</option>
+          <option value="PUT" data-i18n="PUT">PUT</option>
+          <option value="DELETE" data-i18n="DELETE">DELETE</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1" data-i18n="RPS">RPS</label>
+        <input type="number" name="rps" id="rps" class="w-full p-2 border border-slate-300 rounded" value="100" min="1" required>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1" data-i18n="Duration (seconds)">Duration (seconds)</label>
+        <input type="number" name="duration" id="duration" class="w-full p-2 border border-slate-300 rounded" value="30" min="1" required>
+      </div>
+    </div>
+
+    <div id="formError" class="text-red-500 text-sm min-h-[20px]"></div>
+
+    <button type="submit" id="submitBtn" class="px-4 py-2 rounded-lg font-medium transition-all bg-amber-500 text-white hover:bg-amber-600 w-full mt-2">
+      <span data-i18n="Update Scenario">Update Scenario</span>
+    </button>
+  </form>
+</div>
+
+<script>
+  // Embed the server-side scenario object directly into the client-side JavaScript
+  // This makes the initial data available immediately when the script runs
+  const initialScenarioData = <%- JSON.stringify(scenario) %>;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // --- Pre-populate the form with existing scenario data ---
+    if (initialScenarioData) {
+      document.getElementById('scenarioName').value = initialScenarioData.name || '';
+      document.getElementById('targetUrl').value = initialScenarioData.target_url || '';
+      document.getElementById('method').value = initialScenarioData.method || 'GET';
+      document.getElementById('rps').value = initialScenarioData.rps || 100;
+      document.getElementById('duration').value = initialScenarioData.duration || 30;
+    } else {
+      console.error('Initial scenario data not found.');
+      // Optionally, redirect or show an error if data is missing
+      // window.location.href = '/scenarios'; // Example redirect
+    }
+
+    const form = document.getElementById('updateScenarioForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const formError = document.getElementById('formError');
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      // Disable button and show loading state
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span data-i18n="Updating...">Updating...</span>';
+      formError.textContent = '';
+
+      try {
+        const formData = {
+          id: initialScenarioData.id, // Include the ID of the scenario being updated
+          name: document.getElementById('scenarioName').value.trim(),
+          target: document.getElementById('targetUrl').value.trim(),
+          method: document.getElementById('method').value,
+          rps: parseInt(document.getElementById('rps').value),
+          duration: parseInt(document.getElementById('duration').value),
+        };
+
+        // Validate form data
+        if (!formData.name || formData.name.length < 3) {
+          throw new Error('Scenario name must be at least 3 characters long');
+        }
+        if (!formData.target.startsWith('http')) {
+          throw new Error('Target URL must start with http:// or https://');
+        }
+        if (formData.rps < 1 || formData.rps > 10000) {
+          throw new Error('RPS must be between 1 and 10,000');
+        }
+        if (formData.duration < 1 || formData.duration > 3600) {
+          throw new Error('Duration must be between 1 and 3600 seconds');
+        }
+
+        // Use PUT or PATCH method for updates, typically PUT for full replacement
+        const response = await fetch(`/edit/${formData.id}`, { // Include ID in the URL
+          method: 'PUT', // Or 'PATCH' depending on your API design
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update scenario');
+        }
+
+        const result = await response.json();
+        
+        // Show success message and redirect
+        showSuccessMessage('Scenario updated successfully!');
+        setTimeout(() => {
+          window.location.href = '/'; // Redirect to dashboard or back to scenario list
+        }, 1500);
+
+      } catch (error) {
+        formError.textContent = error.message || 'An error occurred while updating the scenario';
+        console.error('Error updating scenario:', error);
+      } finally {
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span data-i18n="Update Scenario">Update Scenario</span>';
+      }
+    });
+
+    function getCSRFToken() {
+      // Implement CSRF token retrieval if needed
+      const metaTag = document.querySelector('meta[name="csrf-token"]');
+      return metaTag ? metaTag.getAttribute('content') : '';
+    }
+
+    function showSuccessMessage(message) {
+      const successDiv = document.createElement('div');
+      successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+      successDiv.textContent = message;
+      document.body.appendChild(successDiv);
+      
+      setTimeout(() => {
+        successDiv.remove();
+      }, 3000);
+    }
+  });
+</script>

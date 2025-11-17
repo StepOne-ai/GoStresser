@@ -7,7 +7,7 @@
 </h2>
 <p class="text-slate-600 mb-6">
   <span data-i18n="Run ID:">Run ID:</span> <code><%= runId %></code> · 
-  <span id="timer" class="font-mono">0s / 10s</span>
+  <span id="timer" class="font-mono">0s / <%= scenario.duration %>s</span>
 </p>
 
 <!-- Fixed height container -->
@@ -53,7 +53,6 @@
 
 <div class="mt-6 flex justify-center">
   <div id="controlButtons" class="flex space-x-4">
-    <!-- This will be replaced by JS after test completes -->
     <button id="stopButton" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition">
       <span data-i18n="Stop Test">■ Stop Test</span>
     </button>
@@ -61,12 +60,10 @@
 </div>
 
 <script>
-// Wait for DOM, then delay slightly for safety
 document.addEventListener('DOMContentLoaded', () => {
   console.log('✅ DOM loaded - initializing charts in 200ms...');
 
   setTimeout(() => {
-    // Chart creation with safety checks
     function createChart(canvasId, color) {
       const canvas = document.getElementById(canvasId);
       if (!canvas) {
@@ -77,10 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const ctx = canvas.getContext('2d');
       return new Chart(ctx, {
         type: 'line',
-        data: {
+         data: {
           labels: [],
           datasets: [{
-            data : [],
+             data: [],
             borderColor: color,
             backgroundColor: color + '20',
             tension: 0.3,
@@ -123,108 +120,131 @@ document.addEventListener('DOMContentLoaded', () => {
       ram: document.getElementById('ramValue')
     };
 
+    // ✅ Use scenario duration instead of hardcoded value
+    const TEST_DURATION = '<%= scenario.duration %>'; // ✅ Injected from server
+    const MAX_DATA_POINTS = Math.min(24, Math.max(8, TEST_DURATION)); // Scale with duration
     let timeElapsed = 0;
-    const MAX_DURATION = 10;
-    const MAX_DATA_POINTS = 8;
+
+    // Authenticated fetch helper
+    async function authFetch(url) {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    }
 
     const stopButton = document.getElementById('stopButton');
-if (stopButton) {
-  stopButton.addEventListener('click', () => {
-    if (window.updateInterval) {
-      clearInterval(window.updateInterval);
-    }
-    timerEl.textContent = `⏹️ Stopped at ${timeElapsed}s`;
-    timerEl.classList.add('text-amber-600');
-
-    // Show rerun button immediately
-    const buttonContainer = document.getElementById('controlButtons');
-    if (buttonContainer) {
-        buttonContainer.innerHTML = `
-          <a href="/run/<%= scenario.id %>" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
-            <span>🔄</span>
-            <span data-i18n="Rerun Test">Rerun Test</span>
-          </a>
-          <a href="/report/<%= runId %>" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
-            <span>📊</span>
-            <span data-i18n="View Report">View Report</span>
-          </a>
-        `;
-
-        if (typeof window.retranslate === 'function') {
-          setTimeout(() => {
-            window.retranslate();
-          }, 0);
+    if (stopButton) {
+      stopButton.addEventListener('click', () => {
+        if (window.updateInterval) {
+          clearInterval(window.updateInterval);
         }
+        timerEl.textContent = `⏹️ Stopped at ${timeElapsed}s`;
+        timerEl.classList.add('text-amber-600');
+
+        const buttonContainer = document.getElementById('controlButtons');
+        if (buttonContainer) {
+          buttonContainer.innerHTML = `
+            <a href="/run/<%= scenario.id %>" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
+              <span>🔄</span>
+              <span data-i18n="Rerun Test">Rerun Test</span>
+            </a>
+            <a href="/report/<%= runId %>" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
+              <span>📊</span>
+              <span data-i18n="View Report">View Report</span>
+            </a>
+          `;
+
+          if (typeof window.retranslate === 'function') {
+            setTimeout(() => window.retranslate(), 0);
+          }
         }
-    });
+      });
     }
 
-    const updateCharts = () => {
-      fetch("<%= metricsUrl %>")
-        .then(res => res.json())
-        .then(data => {
-          // Update values
-          valueEls.rps.textContent = data.rps || 0;
-          valueEls.latency.textContent = (data.latency || 0) + 'ms';
-          valueEls.cpu.textContent = (data.cpu || 0) + '%';
-          valueEls.ram.textContent = (data.ram || 0) + '%';
+    const updateCharts = async () => {
+      try {
+        const data = await authFetch("<%= metricsUrl %>?_t=" + Date.now());
+        
+        // Update values
+        valueEls.rps.textContent = data.rps || data.requests_per_second || 0;
+      valueEls.latency.textContent = (data.avg_latency/10 || data.latency/10 || 0).toFixed(2) + 'ms';
+        valueEls.cpu.textContent = (data.cpu || data.cpu_usage || 0) + '%';
+        valueEls.ram.textContent = (data.ram || data.ram_usage || 0) + '%';
 
-          // Update charts
-          const charts = [rpsChart, latencyChart, cpuChart, ramChart];
-          const values = [data.rps, data.latency, data.cpu, data.ram];
+        // Update charts
+        const charts = [rpsChart, latencyChart, cpuChart, ramChart];
+        const values = [
+          data.rps || data.requests_per_second || 0,
+          data.avg_latency || data.latency || 0,
+          data.cpu || data.cpu_usage || 0,
+          data.ram || data.ram_usage || 0
+        ];
 
-          charts.forEach((chart, i) => {
-            if (chart.data.labels.length >= MAX_DATA_POINTS) {
-              chart.data.labels.shift();
-              chart.data.datasets[0].data.shift();
-            }
-            chart.data.labels.push('');
-            chart.data.datasets[0].data.push(values[i] || 0);
-            chart.update();
-          });
-
-          // Update timer
-          timeElapsed = Math.min((data.timeElapsed !== undefined ? data.timeElapsed : timeElapsed + 1), MAX_DURATION);
-          timerEl.textContent = `${timeElapsed}s / ${MAX_DURATION}s`;
-
-          if (timeElapsed >= MAX_DURATION) {
-            console.log("✅ Test completed — clearing interval");
-            clearInterval(window.updateInterval);
-            
-            timerEl.textContent = `✅ Completed (${MAX_DURATION}s)`;
-            timerEl.classList.add('text-emerald-600');
-
-            // Replace buttons with "Rerun Test"
-            const buttonContainer = document.getElementById('controlButtons');
-            if (buttonContainer) {
-                buttonContainer.innerHTML = `
-                <a href="/run/<%= scenario.id %>" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
-                    <span>🔄</span>
-                    <span data-i18n="Rerun Test">Rerun Test</span>
-                </a>
-                <a href="/report/<%= runId %>" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
-                    <span>📊</span>
-                    <span data-i18n="View Report">View Report</span>
-                </a>
-                `;
-            }
-
-            if (typeof window.retranslate === 'function') {
-                window.retranslate();
-            }
-            }
-        })
-        .catch(err => {
-          console.error('❌ Fetch error:', err);
-          timeElapsed = Math.min(timeElapsed + 1, MAX_DURATION);
-          timerEl.textContent = `${timeElapsed}s / ${MAX_DURATION}s`;
+        charts.forEach((chart, i) => {
+          if (chart.data.labels.length >= MAX_DATA_POINTS) {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
+          }
+          chart.data.labels.push('');
+          chart.data.datasets[0].data.push(values[i] || 0);
+          chart.update();
         });
+
+        // Update timer - use scenario duration for comparison
+        timeElapsed = Math.min(
+          data.time_elapsed !== undefined ? data.time_elapsed : 
+          data.second !== undefined ? data.second :
+          data.timeElapsed !== undefined ? data.timeElapsed :
+          timeElapsed + 1, 
+          TEST_DURATION
+        );
+        timerEl.textContent = `${timeElapsed}s / ${TEST_DURATION}s`;
+
+        // ✅ Use TEST_DURATION for completion check
+        if (timeElapsed >= TEST_DURATION) {
+          console.log(`✅ Test completed — ${TEST_DURATION}s elapsed, clearing interval`);
+          clearInterval(window.updateInterval);
+          
+          timerEl.textContent = `✅ Completed (${TEST_DURATION}s)`;
+          timerEl.classList.add('text-emerald-600');
+
+          const buttonContainer = document.getElementById('controlButtons');
+          if (buttonContainer) {
+            buttonContainer.innerHTML = `
+              <a href="/run/<%= scenario.id %>" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
+                <span>🔄</span>
+                <span data-i18n="Rerun Test">Rerun Test</span>
+              </a>
+              <a href="/report/<%= runId %>" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
+                <span>📊</span>
+                <span data-i18n="View Report">View Report</span>
+              </a>
+            `;
+          }
+
+          if (typeof window.retranslate === 'function') {
+            window.retranslate();
+          }
+        }
+      } catch (err) {
+        console.error('❌ Fetch error:', err);
+        
+        // For errors, increment time but respect scenario duration
+        timeElapsed = Math.min(timeElapsed + 1, TEST_DURATION);
+        timerEl.textContent = `${timeElapsed}s / ${TEST_DURATION}s`;
+      }
     };
 
     // Start updates
     updateCharts();
     window.updateInterval = setInterval(updateCharts, 1000);
-
-  }, 200);
-});
+  })});
 </script>

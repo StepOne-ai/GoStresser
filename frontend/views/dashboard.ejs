@@ -9,14 +9,21 @@
   <% scenarios.forEach(scenario => { %>
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
       <h3 class="font-bold text-lg"><%= scenario.name %></h3>
-      <p class="text-sm text-slate-600 mt-1"><%= scenario.method %> <%= scenario.target %></p>
+      <p class="text-sm text-slate-600 mt-1"><%= scenario.method %> <%= scenario.target_url %></p>
       <div class="mt-4 text-sm">
-        <span class="inline-block bg-slate-100 px-2 py-1 rounded" data-i18n="RPS">RPS: <%= scenario.rps %></span>
-        <span class="inline-block bg-slate-100 px-2 py-1 rounded ml-2" data-i18n="Duration (seconds)">Duration: <%= scenario.duration %>s</span>
+        <span class="inline-block bg-slate-100 px-2 py-1 rounded">RPS: <%= scenario.rps %></span>
+        <span class="inline-block bg-slate-100 px-2 py-1 rounded ml-2">Duration: <%= scenario.duration %>s</span>
       </div>
       <a href="/run/<%= scenario.id %>" class="px-4 py-2 rounded-lg font-medium transition-all bg-slate-200 hover:bg-slate-300 mt-4 w-full block text-center">
         <span data-i18n="Run Test">Run Test</span>
       </a>
+      <a href="/edit/<%= scenario.id %>" class="px-4 py-2 rounded-lg font-medium transition-all bg-amber-500 hover:bg-amber-600 mt-2 w-full block text-center text-white">
+        <span data-i18n="Edit">Edit</span>
+      </a>
+      <a href="/delete/<%= scenario.id %>" class="px-4 py-2 rounded-lg font-medium transition-all bg-red-500 hover:bg-red-600 mt-2 w-full block text-center text-white">
+        <span data-i18n="Delete">Delete</span>
+      </a>
+      
     </div>
   <% }) %>
 </div>
