@@ -179,10 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
               <span>🔄</span>
               <span data-i18n="Rerun Test">Rerun Test</span>
             </a>
-            <a href="/report/<%= runId %>" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
-              <span>📊</span>
-              <span data-i18n="View Report">View Report</span>
-            </a>
           `;
 
           if (typeof window.retranslate === 'function') {
@@ -240,9 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btns.innerHTML = `
               <a href="/run/<%= scenario.id %>" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
                 <span>🔄</span><span data-i18n="Rerun Test">Rerun Test</span>
-              </a>
-              <a href="/report/<%= runId %>" class="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg font-medium transition flex items-center space-x-2">
-                <span>📊</span><span data-i18n="View Report">View Report</span>
               </a>
             `;
             window.retranslate?.();
