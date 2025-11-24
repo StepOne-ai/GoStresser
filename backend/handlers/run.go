@@ -3,7 +3,6 @@ package handlers
 import (
 	"strconv"
 	"time"
-	"fmt"
 
 	db "github.com/StepOne-ai/GoStresser/database"
 	engine "github.com/StepOne-ai/GoStresser/engine"
@@ -96,8 +95,6 @@ func GetAllReportsHandler(c *gin.Context) {
 			CreatedAt: s.CreatedAt.Format("2006-01-02 15:04:05"), // ISO-like but without T/Z
 		}
 	}
-
-	fmt.Println("hhiihihih", scenarios)
 
 	c.JSON(200, scenarios)
 }
