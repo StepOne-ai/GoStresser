@@ -46,9 +46,6 @@ func GetReportHandler(c *gin.Context) {
 	var report models.TestResult
 	err = db.DB.Where("id = ?", uint(runID)).First(&report).Error
 	if err != nil {
-		// If the report was not found after generation, it might mean no metrics were available
-		// Return a 404 or a 200 with an empty/default object depending on your API design
-		// Here, we return a 404 as the report could not be generated or found.
 		c.JSON(404, gin.H{"error": "Report not found"})
 		return
 	}
