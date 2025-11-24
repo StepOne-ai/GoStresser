@@ -67,6 +67,8 @@ func main() {
             run.POST("/:id", handlers.StartTestHandler)
             run.GET("/:run_id/metrics", handlers.GetLiveMetricsHandler)
             run.GET("/:run_id/report", handlers.GetReportHandler)
+            run.GET("/reports", handlers.GetAllReportsHandler)
+            run.DELETE("/:report_id/delete", handlers.DeleteReportHandler)
         }
     }
 

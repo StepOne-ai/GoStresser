@@ -25,7 +25,7 @@ func TestGenerateReport(t *testing.T) {
 		db.DB.Create(&m)
 	}
 
-	GenerateReport(run.ID)
+	GenerateReport(run.ID, "test")
 
 	var result models.TestResult
 	db.DB.First(&result, "run_id = ?", run.ID)

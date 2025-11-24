@@ -2,6 +2,7 @@ package models
 
 type TestResult struct {
     ID            uint    `gorm:"primaryKey" json:"id"`
+    UserID        string  `gorm:"not null" json:"user_id"`
     RunID         uint    `gorm:"not null;uniqueIndex" json:"run_id"`
     TotalRequests int     `gorm:"not null" json:"total_requests"`
     AvgLatency    float64 `gorm:"not null" json:"avg_latency"`

@@ -158,7 +158,7 @@ func RunScenarioHandler(c *gin.Context) {
 	}
 
 	// Start the test in the background
-	go engine.RunLoadTest(scenario, run.ID)
+	go engine.RunLoadTest(scenario, run.ID, userID)
 
 	// Respond immediately
 	c.JSON(http.StatusAccepted, gin.H{

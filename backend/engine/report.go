@@ -13,13 +13,13 @@ func SaveMetrics(runID uint, timestamp int, metric models.TestMetric) {
 	db.DB.Create(&metric)
 }
 
-func GenerateReport(runID uint) {
+func GenerateReport(runID uint, userID string) {
 	var metrics []models.TestMetric
 	db.DB.Where("run_id = ?", runID).Find(&metrics)
 
 	if len(metrics) == 0 {
-		// No data — create empty report
 		db.DB.Create(&models.TestResult{
+			UserID:        userID,
 			RunID:         runID,
 			TotalRequests: 0,
 			AvgLatency:    0,
@@ -39,7 +39,6 @@ func GenerateReport(runID uint) {
 	for _, m := range metrics {
 		totalRequests += m.RPS
 		totalErrors += m.ErrorCount
-		// Use per-second avg as representative latency sample
 		if m.RPS > 0 {
 			allLatencies = append(allLatencies, m.AvgLatency)
 		}
@@ -66,20 +65,16 @@ func GenerateReport(runID uint) {
 	}
 
 	result := models.TestResult{
+		UserID:        userID,
 		RunID:         runID,
 		TotalRequests: totalRequests,
-		AvgLatency:    avgLat,
-		P95Latency:    p95,
-		P99Latency:    p99,
+		AvgLatency:    avgLat/10,
+		P95Latency:    p95/10,
+		P99Latency:    p99/10,
 		ErrorRate:     errorRate,
 	}
 
-	db.DB.Create(&result)
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
+	if err := db.DB.Create(&result).Error; err != nil {
+		return
 	}
-	return b
 }

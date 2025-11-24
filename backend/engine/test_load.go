@@ -10,7 +10,7 @@ import (
 	"github.com/StepOne-ai/GoStresser/models"
 )
 
-func RunLoadTest(scenario models.Scenario, runID uint) {
+func RunLoadTest(scenario models.Scenario, runID uint, userID string) {
 	// Validate inputs
 	if scenario.RPS <= 0 {
 		scenario.RPS = 1
@@ -172,5 +172,5 @@ cleanup:
 		"duration": second,
 	})
 
-	GenerateReport(runID)
+	GenerateReport(runID, userID)
 }

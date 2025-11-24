@@ -44,7 +44,7 @@ func TestRunLoadTest(t *testing.T) {
 	db.DB.Create(&run)
 
 	// Run the load test
-	RunLoadTest(scenario, run.ID)
+	RunLoadTest(scenario, run.ID, scenario.UserID)
 
 	// Wait a bit more to ensure cleanup
 	time.Sleep(100 * time.Millisecond)
