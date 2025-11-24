@@ -24,7 +24,8 @@
             <nav class="hidden md:flex space-x-1">
               <a href="/" class="px-3 py-2 rounded-md text-sm font-medium transition-colors <%= (locals.path === '/' ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-200') %>" data-i18n="Dashboard">Dashboard</a>
               <a href="/scenario/new" class="px-3 py-2 rounded-md text-sm font-medium transition-colors <%= (locals.path === '/scenario/new' ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-200') %>" data-i18n="Create Test">Create Test</a>
-              <a href="#" class="px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-slate-200" data-i18n="Documentation">Documentation</a>
+              <a href="/reports" class="px-3 py-2 rounded-md text-sm font-medium transition-colors <%= (locals.path === '/reports' ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-200') %>" data-i18n="Reports">Reports</a>
+              <a href="/docs" class="px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-slate-200" data-i18n="Documentation">Documentation</a>
             </nav>
           </div>
           <div class="flex items-center space-x-4 text-sm">
@@ -32,10 +33,12 @@
               <div class="bg-slate-100 px-3 py-1 rounded-full">
                 <%= userEmail %>
               </div>
+              <a href="/logout">
+              <button class="font-medium text-slate-600 hover:text-slate-900 transition px-3 py-1 rounded">
+                <span data-i18n="Logout">Logout</span>
+              </button>
+            </a>
             <% } %>
-            <div class="text-slate-500">
-              v1.0.0
-            </div>
             <button id="langToggle" class="font-medium text-slate-600 hover:text-slate-900 transition px-3 py-1 rounded">
               🌐 EN
             </button>
@@ -103,7 +106,9 @@
       'RAM Usage (%)': 'RAM Usage (%)',
       'Run Test': 'Run Test',
       'Delete': 'Delete',
-      'Edit': 'Edit'
+      'Edit': 'Edit',
+      'Reports': 'Reports',
+      'Logout': 'Logout'
     },
     ru: {
       // Navigation
@@ -146,6 +151,8 @@
       'Run Test': 'Запустить тест',
       'Delete': 'Удалить',
       'Edit': 'Редактировать',
+      'Reports': 'Отчёты',
+      'Logout': 'Выход'
     }
   };
 

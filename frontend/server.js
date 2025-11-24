@@ -215,24 +215,20 @@ app.post('/api/v1/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/v1/auth/logout', async (req, res) => {
+app.get('/logout', async (req, res) => {
   try {
-    if (!USE_MOCK_API && req.session.token) {
-      await callBackendApi('POST', '/auth/logout', {}, req.session);
-    }
-    
     req.session.destroy(err => {
       if (err) {
         console.error('Session destroy error:', err);
         return res.status(500).json({ success: false, error: 'Logout failed' });
       }
-      res.json({ success: true, redirect: '/login' });
+      return res.redirect('/login');
     });
   } catch (error) {
     console.error('Logout error:', error);
     // Still destroy session even if backend logout fails
     req.session.destroy(() => {
-      res.json({ success: true, redirect: '/login' });
+      return res.redirect('/login');
     });
   }
 });
@@ -289,7 +285,6 @@ app.post('/api/scenarios', requireAuth, async (req, res) => {
 
     const scenario = USE_MOCK_API ? result : result.data;
 
-    // ✅ Success: send response and RETURN
     return res.json({ success: true, scenario });
 
   } catch (error) {
@@ -396,25 +391,67 @@ app.get('/delete/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/report/:runId', requireAuth, (req, res) => {
-  const mockReport = {
-    runId: req.params.runId,
-    scenarioName: "Users API Load",
-    totalRequests: 3000,
-    avgLatency: 142,
-    errorRate: 0.2,
-    peakCPU: 82,
-    recommendations: [
-      "Latency stable — no bottlenecks detected",
-      "CPU near limit — consider scaling at >500 RPS",
-    ],
-  };
-  res.render('report', { 
-    report: mockReport,
-    path: '/',
-    userEmail: req.session.userEmail,
-    name: req.session.userName
-  });
+app.get('/delete/report/:id', requireAuth, async (req, res) => {
+  try {
+    const result = USE_MOCK_API
+      ? await mockDeleteReport(req.params.id)
+      : await callBackendApi('DELETE', `/run/${req.params.id}/delete`, null, req.session);
+
+    if (!USE_MOCK_API && !result.success) {
+      throw new Error(result.error);
+    }
+
+    res.redirect('/reports');
+  } catch (err) {
+    console.error('Delete report error:', err);
+    res.status(500).send('Failed to delete report');
+  }
+})
+
+app.get('/reports', requireAuth, async (req, res) => {
+  try {
+    let reports;
+    if (USE_MOCK_API) {
+      reports = mockElapsedTime;
+    } else {
+      const result = await callBackendApi('GET', '/run/reports', null, req.session);
+      if (!result.success) throw new Error(result.error);
+      reports = result.data;
+    }
+    console.log(reports);
+    res.render('reports', { reports, path: '/run/reports', userEmail: req.session.userEmail,
+      name: req.session.userName || req.session.userEmail.split('@')[0] });
+  } catch (err) {
+    console.error('Reports error:', err);
+    res.status(500).send('Failed to load reports');
+  }
+})
+
+app.get('/report/:runId', requireAuth, async (req, res) => {
+  try {
+    // Construct the backend API URL for the report endpoint
+    // Call the backend API to get the report data
+    const reportResponse = await callBackendApi('GET', "/run/"+req.params.runId+"/report", null, req.session); // Assuming token is stored in session
+
+    if (!reportResponse.success) {
+      throw new Error(reportResponse.error);
+    }
+
+
+    console.log(reportResponse.data)
+    // Render the report template with the data received from the backend
+    res.render('report', { 
+      report: reportResponse.data,
+      path: '/',
+      userEmail: req.session.userEmail,
+      name: req.session.userName
+    });
+
+  } catch (error) {
+    console.error('Error fetching report:', error);
+    // Handle errors appropriately, e.g., render an error page or redirect
+    res.json({ error: 'Failed to fetch report' });
+  }
 });
 
 app.put('/edit/:id', async (req, res) => {

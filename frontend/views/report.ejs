@@ -8,33 +8,35 @@
       <a href="/" class="px-4 py-2 rounded-lg font-medium bg-slate-200 hover:bg-slate-300 transition-all text-sm">
         <span data-i18n="Dashboard">🏠 Dashboard</span>
       </a>
-      <a href="/run/1" class="px-4 py-2 rounded-lg font-medium bg-emerald-500 hover:bg-emerald-600 transition-all text-white text-sm">
-        <span data-i18n="Rerun Test">🔄 Rerun Test</span>
-      </a>
     </div>
   </div>
 
   <!-- Summary Card -->
   <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 mb-6">
     <h3 class="font-bold text-lg mb-4" data-i18n="Summary">📋 Summary</h3>
-    <div class="grid grid-cols-2 gap-4 text-sm">
-      <div><strong data-i18n="Scenario:">Scenario:</strong> <%= report.scenarioName %></div>
-      <div><strong data-i18n="Run ID:">Run ID:</strong> <code><%= report.runId %></code></div>
-      <div><strong data-i18n="Total Requests:">Total Requests:</strong> <%= report.totalRequests.toLocaleString() %></div>
-      <div><strong data-i18n="Avg Latency:">Avg Latency:</strong> <%= report.avgLatency %>ms</div>
-      <div><strong data-i18n="Error Rate:">Error Rate:</strong> <%= report.errorRate %>%</div>
-      <div><strong data-i18n="Peak CPU:">Peak CPU:</strong> <%= report.peakCPU %>%</div>
-    </div>
+  <div class="grid grid-cols-2 gap-4 text-sm">
+    <div><strong data-i18n="Report ID:">Report ID:</strong> <%= report.id %></div>
+    <div><strong data-i18n="Run ID:">Run ID:</strong> <code><%= report.run_id %></code></div>
+    <div><strong data-i18n="Total Requests:">Total Requests:</strong> <%= report.total_requests %></div>
+    <div><strong data-i18n="Avg Latency:">Avg Latency:</strong> <%= (report.avg_latency / 10).toFixed(2) %>ms</div>
+    <div><strong data-i18n="P95 Latency:">P95 Latency:</strong> <%= (report.p95_latency / 10).toFixed(2) %>ms</div>
+    <div><strong data-i18n="P99 Latency:">P99 Latency:</strong> <%= (report.p99_latency / 10).toFixed(2) %>ms</div>
+    <div><strong data-i18n="Error Rate:">Error Rate:</strong> <%= (report.error_rate / 10).toFixed(2) + '%' %></div>
+    <div><strong data-i18n="Peak CPU:">Peak CPU:</strong> <%= report.peak_cpu + '%' %></div>
+    <div><strong data-i18n="Peak RAM:">Peak RAM:</strong> <%= report.peak_ram + '%' %></div>
+  </div>
   </div>
 
   <!-- Recommendations -->
   <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100 mb-6">
     <h3 class="font-bold text-lg mb-4" data-i18n="Recommendations">💡 Recommendations</h3>
-    <ul class="list-disc list-inside space-y-2">
-      <% report.recommendations.forEach(rec => { %>
-        <li><%= rec %></li>
-      <% }) %>
-    </ul>
+    <% if (report.recommendations && report.recommendations !== "") { %>
+      <ul class="list-disc list-inside space-y-2">
+        <li><%= report.recommendations %></li>
+      </ul>
+    <% } else { %>
+      <p>No recommendations available.</p>
+    <% } %>
   </div>
 
   <!-- Result Badge -->

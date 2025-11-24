@@ -1,0 +1,18 @@
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold" data-i18n="Reports">Reports</h2>
+</div>
+
+<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+  <% reports.forEach(report => { %>
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+      <h3 class="font-bold text-lg"><%= report.name %></h3>
+      <p class="text-sm text-slate-600 mt-1"><%= report.created_at %></p>
+      <a href="/report/<%= report.id %>" class="px-4 py-2 rounded-lg font-medium transition-all bg-slate-200 hover:bg-slate-300 mt-4 w-full block text-center">
+        <span data-i18n="View Report">View Report</span>
+      </a>
+      <a href="/delete/report/<%= report.id %>" class="px-4 py-2 rounded-lg font-medium transition-all bg-red-500 hover:bg-red-600 mt-2 w-full block text-center text-white">
+        <span data-i18n="Delete">Delete</span>
+      </a>
+    </div>
+  <% }) %>
+</div>
